@@ -3,73 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Maxsus Sanoq  Kalkulyator | 2 va 10-lik</title>
+    <title>SONLI Kalkulyator | 2 va 10-lik</title>
     <style>
-        body {
-            background-color: #1e1e2e;
-            color: #cdd6f4;
-            font-family: 'Courier New', Courier, monospace;
-            display: flex;
-            justify-content: center;
-            padding: 20px;
-        }
-        .container {
-            background-color: #1e1e2e;
-            width: 100%;
-            max-width: 500px;
-        }
+        body { background-color: #1e1e2e; color: #cdd6f4; font-family: 'Courier New', Courier, monospace; display: flex; justify-content: center; padding: 20px; }
+        .container { background-color: #1e1e2e; width: 100%; max-width: 500px; }
         h2 { text-align: center; color: #a6e3a1; margin-bottom: 25px; }
         label { font-weight: bold; font-size: 14px; margin-bottom: 5px; display: block; }
         .label-yellow { color: #f9e2af; }
         .label-purple { color: #cba6f7; }
-        
-        select, input {
-            width: 100%;
-            padding: 10px;
-            margin-bottom: 15px;
-            background-color: #313244;
-            color: white;
-            border: 1px solid #45475a;
-            border-radius: 5px;
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 16px;
-            box-sizing: border-box;
-        }
-        button {
-            width: 100%;
-            padding: 15px;
-            background-color: #89b4fa;
-            color: #11111b;
-            border: none;
-            border-radius: 5px;
-            font-size: 18px;
-            font-weight: bold;
-            cursor: pointer;
-            margin-top: 10px;
-            font-family: 'Courier New', Courier, monospace;
-        }
+        select, input { width: 100%; padding: 10px; margin-bottom: 15px; background-color: #313244; color: white; border: 1px solid #45475a; border-radius: 5px; font-family: 'Courier New', Courier, monospace; font-size: 16px; box-sizing: border-box; outline: none; }
+        select:focus, input:focus { border-color: #89b4fa; }
+        button { width: 100%; padding: 15px; background-color: #89b4fa; color: #11111b; border: none; border-radius: 5px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 10px; font-family: 'Courier New', Courier, monospace; transition: 0.2s; }
         button:hover { background-color: #b4befe; }
         button:disabled { background-color: #585b70; cursor: not-allowed; }
-        
-        #terminal {
-            margin-top: 20px;
-            background-color: #11111b;
-            color: #a6e3a1;
-            padding: 15px;
-            border-radius: 5px;
-            min-height: 200px;
-            white-space: pre-wrap;
-            font-family: 'Consolas', monospace;
-            font-size: 14px;
-            overflow-y: auto;
-            max-height: 300px;
-        }
+        #terminal { margin-top: 20px; background-color: #11111b; color: #a6e3a1; padding: 15px; border-radius: 5px; min-height: 200px; white-space: pre-wrap; font-family: 'Consolas', monospace; font-size: 14px; overflow-y: auto; max-height: 300px; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>⚡SANOQ SISTEMASI UCHUN KALKULYATOR DASTURI</h2>
+    <h2>⚡ Sonli amallar  KALKULYATOR</h2>
 
     <label class="label-yellow">📥 Kiritish rejimi (Input):</label>
     <select id="kiritish">
@@ -85,8 +38,8 @@
         <option value="10">10-likka o'tkazish</option>
     </select>
 
-    <label>1-sonni kiriting (Masalan: 1010 yoki 25):</label>
-    <input type="text" id="son1" placeholder="1-son...">
+    <label>1-sonni kiriting:</label>
+    <input type="text" id="son1" placeholder="Raqamni kiriting...">
 
     <label>Amalni tanlang:</label>
     <select id="amal">
@@ -96,51 +49,60 @@
     </select>
 
     <label>2-sonni kiriting:</label>
-    <input type="text" id="son2" placeholder="2-son...">
+    <input type="text" id="son2" placeholder="Raqamni kiriting...">
 
     <button id="calcBtn" onclick="hisoblash()">HISOBLASH</button>
-
     <div id="terminal"></div>
 </div>
 
 <script>
-    let timerId = null;
+    let animId = null;
 
-    // 0b belgisiz, toza ikkilik son formatlash
+    // Kiritilayotgan sonni maxsus filtrlash (Real-time o'chirish)
+    function maydonniFiltrlash(el) {
+        let mode = document.getElementById("kiritish").value;
+        if (mode === "2") {
+            // Faqat 0 va 1 ga ruxsat beramiz. Boshqa harflarni o'chiramiz.
+            el.value = el.value.replace(/[^01]/g, '');
+        } else if (mode === "10") {
+            // Faqat raqamlarga va manfiy belgiga ruxsat.
+            el.value = el.value.replace(/[^0-9\-]/g, '');
+        }
+    }
+
+    // Input qilingan vaqtda darhol ishlashi uchun event qo'shish
+    document.getElementById("son1").addEventListener("input", (e) => maydonniFiltrlash(e.target));
+    document.getElementById("son2").addEventListener("input", (e) => maydonniFiltrlash(e.target));
+    
+    // Rejim o'zgarsa, ichidagi eski yozuvlar ham filtrlanib ketadi
+    document.getElementById("kiritish").addEventListener("change", () => {
+        maydonniFiltrlash(document.getElementById("son1"));
+        maydonniFiltrlash(document.getElementById("son2"));
+    });
+
     function formatBinary(val) {
-        if (val < 0) return "-" + Math.abs(val).toString(2);
-        return val.toString(2);
+        return val < 0 ? "-" + Math.abs(val).toString(2) : val.toString(2);
     }
 
     function parseSon(sonStr, forceBase) {
-        sonStr = sonStr.trim().toLowerCase();
         let isNegative = sonStr.startsWith("-");
         let cleanStr = sonStr.replace("-", "");
-        
-        let base = 10;
-        let val = 0;
+        let base = 10, val = 0;
 
         if (forceBase === 2) {
-            base = 2;
-            val = parseInt(cleanStr.replace("0b", ""), 2);
+            base = 2; val = parseInt(cleanStr, 2);
         } else if (forceBase === 10) {
-            base = 10;
-            val = parseInt(cleanStr, 10);
+            base = 10; val = parseInt(cleanStr, 10);
         } else {
-            // Auto
             if (cleanStr.startsWith("0b")) {
-                base = 2;
-                val = parseInt(cleanStr.replace("0b", ""), 2);
+                base = 2; val = parseInt(cleanStr.replace("0b", ""), 2);
             } else {
-                base = 10;
-                val = parseInt(cleanStr, 10);
+                base = 10; val = parseInt(cleanStr, 10);
             }
         }
         
         if (isNaN(val)) throw new Error("Invalid");
-        if (isNegative) val = -val;
-        
-        return { val, base };
+        return { val: isNegative ? -val : val, base };
     }
 
     function hisoblash() {
@@ -152,10 +114,7 @@
         let btn = document.getElementById("calcBtn");
         let term = document.getElementById("terminal");
 
-        if (!s1 || !s2) {
-            alert("Iltimos, ikkala sonni ham kiriting!");
-            return;
-        }
+        if (!s1 || !s2) return alert("Iltimos, ikkala sonni ham kiriting!");
 
         try {
             let forceIn = inMode === "auto" ? null : parseInt(inMode);
@@ -165,18 +124,14 @@
             let outBase = obj1.base === obj2.base ? obj1.base : 10;
             if (outMode !== "auto") outBase = parseInt(outMode);
 
-            let natija = 0;
-            let amalText = "";
-            if (amal === "+") { natija = obj1.val + obj2.val; amalText = "Qo'shish (+)"; }
-            if (amal === "-") { natija = obj1.val - obj2.val; amalText = "Ayirish (-)"; }
-            if (amal === "*") { natija = obj1.val * obj2.val; amalText = "Ko'paytirish (*)"; }
+            let natija = amal === "+" ? obj1.val + obj2.val : (amal === "-" ? obj1.val - obj2.val : obj1.val * obj2.val);
+            let amalText = amal === "+" ? "Qo'shish (+)" : (amal === "-" ? "Ayirish (-)" : "Ko'paytirish (*)");
 
             let v1Conv = outBase === 2 ? formatBinary(obj1.val) : obj1.val.toString();
             let v2Conv = outBase === 2 ? formatBinary(obj2.val) : obj2.val.toString();
             let finalRes = outBase === 2 ? formatBinary(natija) : natija.toString();
 
             let k_matn = inMode === "auto" ? "Avtomatik" : `Qat'iy ${inMode}-lik`;
-
             let fullText = 
 "----------------------------------------\n" +
 "[*] TIZIM: Hisoblash va Konvertatsiya\n" +
@@ -191,17 +146,18 @@
 " [YAKUNIY NATIJA] = " + finalRes + "\n" +
 "----------------------------------------\n";
 
-            if (timerId) clearTimeout(timerId);
+            if (animId) cancelAnimationFrame(animId);
             term.textContent = "";
             btn.disabled = true;
 
             let i = 0;
             function typeWriter() {
                 if (i < fullText.length) {
-                    term.textContent += fullText.charAt(i);
+                    // Animatsiya optimallashtirildi: har kadrda 3 ta belgi chiziladi
+                    term.textContent += fullText.substring(i, i + 3);
                     term.scrollTop = term.scrollHeight;
-                    i++;
-                    timerId = setTimeout(typeWriter, 15);
+                    i += 3;
+                    animId = requestAnimationFrame(typeWriter);
                 } else {
                     btn.disabled = false;
                 }
@@ -209,7 +165,7 @@
             typeWriter();
 
         } catch (e) {
-            alert("Xatolik! Noto'g'ri qiymat kiritdingiz.");
+            alert("Xatolik! Kiritilgan son rejimga mos emas.");
         }
     }
 </script>
