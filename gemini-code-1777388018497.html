@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HelperGo V7.0 — Final Enterprise Superapp</title>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        :root {
+            --primary: #FF5C00;
+            --primary-glow: rgba(255, 92, 0, 0.2);
+            --bg: #0A0A0F;
+            --bg2: #12121A;
+            --bg3: #1A1A24;
+            --card: #16161F;
+            --border: rgba(255, 255, 255, 0.08);
+            --text: #F0F0F8;
+            --text-muted: #94A3B8;
+            --success: #10B981;
+            --warning: #F59E0B;
+            --danger: #EF4444;
+            --radius: 24px;
+        }
+
+        body.light-mode {
+            --bg: #F8FAFC;
+            --bg2: #FFFFFF;
+            --bg3: #F1F5F9;
+            --card: #FFFFFF;
+            --border: rgba(0, 0, 0, 0.08);
+            --text: #1E293B;
+            --text-muted: #64748B;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: var(--bg); color: var(--text); font-family: 'Plus Jakarta Sans', sans-serif; transition: 0.4s; overflow-x: hidden; }
+
+        /* ── LANDING SECTION ── */
+        .landing-header { height: 90px; display: flex; align-items: center; justify-content: space-between; padding: 0 6%; background: var(--bg2); border-bottom: 1px solid var(--border); position: sticky; top:0; z-index:1000; }
+        .hero { padding: 120px 6% 60px; text-align: center; background: radial-gradient(circle at 50% 50%, var(--primary-glow), transparent 70%); }
+        .hero h1 { font-family: 'Syne'; font-size: 4rem; line-height: 1.1; margin-bottom: 25px; }
+        .about-section { padding: 80px 6%; background: var(--bg2); }
+        .about-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 30px; margin-top: 50px; }
+
+        /* ── APP INTERFACE ── */
+        #appContainer { display: none; }
+        .sidebar { width: 280px; background: var(--bg2); border-right: 1px solid var(--border); height: 100vh; position: fixed; display: flex; flex-direction: column; z-index: 1000; }
+        .main-view { margin-left: 280px; min-height: 100vh; background: var(--bg); }
+        .topbar { height: 80px; background: var(--bg2); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 30px; position: sticky; top: 0; z-index: 900; }
+
+        /* ── UI ELEMENTS ── */
+        .nav-item { padding: 15px 25px; margin: 4px 15px; border-radius: 14px; cursor: pointer; display: flex; align-items: center; gap: 12px; color: var(--text-muted); transition: 0.3s; font-weight: 600; }
+        .nav-item.active { background: var(--primary); color: white; box-shadow: 0 8px 20px var(--primary-glow); }
+        .card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 25px; margin-bottom: 20px; transition: 0.3s; }
+        .btn { padding: 12px 24px; border-radius: 12px; border: none; cursor: pointer; font-weight: 700; transition: 0.3s; display: inline-flex; align-items: center; gap: 8px; font-family: inherit; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-ghost { background: var(--bg3); color: var(--text); }
+        .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
+        .form-input { width: 100%; padding: 14px; background: var(--bg3); border: 1px solid var(--border); border-radius: 12px; color: var(--text); margin-bottom: 15px; outline: none; }
+
+        /* ── MAP ── */
+        #map { height: 450px; width: 100%; border-radius: 24px; border: 1px solid var(--border); margin-bottom: 30px; z-index: 1; }
+
+        /* ── OTHER ── */
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+        .badge { background: var(--bg3); padding: 6px 12px; border-radius: 8px; font-weight: 700; font-size: 13px; color: var(--primary); display: inline-block; }
+        
+        #toast { position: fixed; top: 30px; right: 30px; background: var(--text); color: var(--bg); padding: 18px 30px; border-radius: 16px; font-weight: 800; transform: translateX(200%); transition: 0.5s; z-index: 10000; }
+        #toast.show { transform: translateX(0); }
+        
+        #offlineMode { position: fixed; inset: 0; background: var(--bg); z-index: 9999; display: none; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+
+        @media (max-width: 900px) {
+            .sidebar { transform: translateX(-100%); }
+            .main-view { margin-left: 0; }
+            .grid-3, .grid-2, .about-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="offlineMode">
+    <i class="fa-solid fa-signal-slash" style="font-size: 5rem; color: var(--danger); margin-bottom: 20px;"></i>
+    <h1>Oflayn Rejim</h1>
+    <p style="color:var(--text-muted); margin: 20px 0;">Internet aloqasi yo'q. Faqat muhim bo'limlar ishlamoqda.</p>
+    <div class="grid-2">
+        <button class="btn btn-primary" onclick="nav('passport', document.querySelectorAll('.nav-item')[5]); document.getElementById('offlineMode').style.display='none';">📋 Servis Tarixi</button>
+        <button class="btn" style="background:var(--danger); color:white" onclick="showToast('🚨 SOS signal keshlandi!')">🚨 SOS Xizmati</button>
+    </div>
+</div>
+
+<div id="landingPage">
+    <header class="landing-header">
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="background: var(--primary); color: white; width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 22px;">H</div>
+            <h2 style="font-family: 'Syne'; letter-spacing: -1px;">HelperGo</h2>
+        </div>
+        <div style="display: flex; gap: 15px;">
+            <button onclick="toggleTheme()" class="btn btn-ghost"><i class="fa-solid fa-circle-half-stroke"></i></button>
+            <button class="btn btn-outline" onclick="showAuth('login')">Kirish</button>
+            <button class="btn btn-primary" onclick="showAuth('reg')">Ro'yxatdan o'tish</button>
+        </div>
+    </header>
+
+    <section class="hero">
+        <h1>Avtomobil egalari uchun <br><span style="color:var(--primary)">Yagona Superapp</span></h1>
+        <p style="color:var(--text-muted); max-width: 700px; margin: 30px auto 45px; font-size: 1.2rem; line-height: 1.6;">
+            Bozor tarqoqligiga chek qo'yamiz. Usta topish, ehtiyot qismlar, yoqilg'i narxlari va AI diagnostika — endi hammasi bitta ilovada.
+        </p>
+        <button class="btn btn-primary" style="padding: 20px 50px; font-size: 1.1rem;" onclick="showAuth('reg')">Hozirroq Boshlang</button>
+    </section>
+
+    <section class="about-section">
+        <h2 style="font-family: 'Syne'; text-align: center; font-size: 2.5rem;">Dastur nimalar qila oladi?</h2>
+        <div class="about-grid">
+            <div class="card"><h3>🔧 Usta Bron Qilish</h3><p style="color:var(--text-muted); margin-top:10px;">Real vaqtdagi navbatlarni ko'ring va o'zingizga qulay vaqtni band qiling.</p></div>
+            <div class="card"><h3>🤖 AI Diagnostika</h3><p style="color:var(--text-muted); margin-top:10px;">Mashina sensorlaridagi xatolarni usta yordamisiz AI orqali aniqlang.</p></div>
+            <div class="card"><h3>⛽ Smart AYOQSH</h3><p style="color:var(--text-muted); margin-top:10px;">Hududingizdagi eng arzon va eng yaqin yoqilg'i quyish shoxobchalarini toping.</p></div>
+            <div class="card"><h3>📋 Raqamli Pasport</h3><p style="color:var(--text-muted); margin-top:10px;">Barcha moy almashtirish va ta'mirlash ishlarini Blockchain tizimida saqlang.</p></div>
+            <div class="card"><h3>🛒 Ehtiyot Qismlar</h3><p style="color:var(--text-muted); margin-top:10px;">Original qismlarni narxlarni solishtirgan holda to'g'ridan-to'g'ri buyurtma bering.</p></div>
+            <div class="card"><h3>🚨 SOS Xizmati</h3><p style="color:var(--text-muted); margin-top:10px;">Yo'lda qolib ketsangiz, bir tugma bilan eng yaqin evakuatorni chaqiring.</p></div>
+        </div>
+    </section>
+</div>
+
+<div id="authModal" style="position: fixed; inset: 0; background: rgba(0,0,0,0.9); display: none; align-items: center; justify-content: center; z-index: 2000; backdrop-filter: blur(15px);">
+    <div class="card" style="width: 450px; background: var(--bg2); padding: 40px;">
+        <h2 id="authTitle" style="font-family: 'Syne'; margin-bottom: 25px;">Tizimga kirish</h2>
+        <div id="regFields" style="display:none;">
+            <input type="text" id="regName" class="form-input" placeholder="Ism Sharifingiz">
+        </div>
+        <input type="text" id="regUser" class="form-input" placeholder="Login (Demo: admin)">
+        <input type="password" id="regPass" class="form-input" placeholder="Parol (Demo: 1234)">
+        <button class="btn btn-primary w-full" style="width: 100%; margin-bottom: 10px;" onclick="doAuth()">Davom etish</button>
+        <button class="btn btn-ghost w-full" style="width: 100%;" onclick="document.getElementById('authModal').style.display='none'">Bekor qilish</button>
+    </div>
+</div>
+
+<div id="appContainer">
+    <div class="sidebar">
+        <div style="padding: 35px; font-family: 'Syne'; font-weight: 800; color: var(--primary); font-size: 24px;">HelperGo PRO</div>
+        <nav style="flex: 1;">
+            <div class="nav-item active" onclick="nav('dash', this)"><i class="fa-solid fa-house"></i> Dashboard</div>
+            <div class="nav-item" onclick="nav('workshops', this)"><i class="fa-solid fa-map-location-dot"></i> Ustaxonalar</div>
+            <div class="nav-item" onclick="nav('fuel', this)"><i class="fa-solid fa-gas-pump"></i> AYOQSH (Yoqilg'i)</div>
+            <div class="nav-item" onclick="nav('market', this)"><i class="fa-solid fa-cart-shopping"></i> Market</div>
+            <div class="nav-item" onclick="nav('ai', this)"><i class="fa-solid fa-robot"></i> AI Diagnostika</div>
+            <div class="nav-item" onclick="nav('passport', this)"><i class="fa-solid fa-user-circle"></i> Profil & Tarix</div>
+        </nav>
+        <div style="padding: 25px; border-top: 1px solid var(--border); display: flex; align-items: center; gap: 12px;">
+            <div id="uAv" style="width: 45px; height: 45px; background: var(--primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; color:white">A</div>
+            <div style="flex:1">
+                <div id="uName" style="font-weight: 700; font-size: 15px;">User</div>
+                <div style="font-size: 11px; color: var(--text-muted);">Premium Foydalanuvchi</div>
+            </div>
+            <button onclick="logout()" style="background: none; border: none; color: var(--danger); cursor: pointer;"><i class="fa-solid fa-power-off"></i></button>
+        </div>
+    </div>
+
+    <main class="main-view">
+        <div class="topbar">
+            <h3 id="viewTitle">Dashboard</h3>
+            <div style="display: flex; gap: 20px; align-items: center;">
+                <select id="regionSelector" class="btn btn-ghost" onchange="changeRegion()">
+                    <option value="toshkent">Toshkent</option>
+                    <option value="samarqand">Samarqand</option>
+                    <option value="buxoro">Buxoro</option>
+                    <option value="namangan">Namangan</option>
+                    <option value="andijon">Andijon</option>
+                    <option value="fargona">Farg'ona</option>
+                    <option value="navoiy">Navoiy</option>
+                </select>
+                <div class="badge" style="color:var(--success)">💰 Balans: 0 UZS</div>
+                <button onclick="toggleTheme()" class="btn btn-ghost" style="padding: 10px;"><i class="fa-solid fa-moon"></i></button>
+            </div>
+        </div>
+
+        <div style="padding: 30px;">
+            <div id="sec-dash" class="tab-view">
+                <div class="card" style="background: linear-gradient(135deg, var(--primary), #FF8040); color: white; border: none;">
+                    <h1>Salom, <span id="welcomeName">Mijoz</span>! 👋</h1>
+                    <p style="margin-top: 10px; opacity: 0.9;">Bugun mashinangiz uchun nima qilamiz?</p>
+                </div>
+                <div class="grid-3">
+                    <div class="card"><h4>Xaridlar</h4><h2 style="color:var(--primary); margin:10px 0">0</h2><p style="font-size:12px">Bu oyda</p></div>
+                    <div class="card"><h4>Keshbek</h4><h2 style="color:var(--success); margin:10px 0">0 UZS</h2></div>
+                    <div class="card" style="border: 2px solid var(--danger); background: rgba(239, 68, 68, 0.05); cursor:pointer" onclick="showToast('🚨 SOS! Evakuator chaqirilmoqda.')">
+                        <h4>🚨 SOS</h4><p style="font-size:11px; margin-top:5px">Favqulodda Yordam</p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="sec-workshops" class="tab-view" style="display: none;">
+                <h2 style="margin-bottom: 25px;">Eng yaqin ustaxonalar</h2>
+                <div id="map"></div>
+                <div class="grid-2" id="workshopList"></div>
+            </div>
+
+            <div id="sec-fuel" class="tab-view" style="display: none;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+                    <h2>AYOQSH Narxlari</h2>
+                    <div style="display: flex; gap:10px">
+                        <button class="btn btn-ghost" onclick="renderFuel('price')">💰 Arzoni</button>
+                        <button class="btn btn-ghost" onclick="renderFuel('dist')">📍 Yaqini</button>
+                    </div>
+                </div>
+                <div class="grid-2" id="fuelList"></div>
+            </div>
+
+            <div id="sec-market" class="tab-view" style="display: none;">
+                <h2>Ehtiyot Qismlar</h2>
+                <div class="grid-3" id="mList" style="margin-top: 25px;"></div>
+            </div>
+            
+            <div id="sec-ai" class="tab-view" style="display: none;">
+                <div class="card" style="text-align: center; padding: 60px;">
+                    <div style="font-size: 4rem; margin-bottom: 20px;">🤖</div>
+                    <h2>AI Diagnostika Tizimi</h2>
+                    <p style="color: var(--text-muted); margin-bottom: 30px;">Dvigatel ovozini yozib oling yoki OBD-II ulang.</p>
+                    <button class="btn btn-primary" onclick="runAI()">Skanerlashni boshlash</button>
+                    <div id="aiRes" style="display: none; margin-top: 30px; color: var(--success); font-weight: 700;">✅ Diagnostika yakunlandi: Mashina holati a'lo! (Xato: 0)</div>
+                </div>
+            </div>
+
+            <div id="sec-passport" class="tab-view" style="display: none;">
+                <div class="card">
+                    <div style="display: flex; gap: 30px; align-items: center;">
+                        <div id="pAv" style="width: 100px; height: 100px; background: var(--primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 3rem; color: white; font-weight: 800;">A</div>
+                        <div>
+                            <h1 id="pName">Admin</h1>
+                            <p style="color: var(--text-muted);" id="pLogin">@admin</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="card">
+                    <h3>Servis Tarixi</h3>
+                    <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+                        <thead><tr><th style="text-align:left; padding:10px">Xizmat</th><th>Sana</th><th>Xarajat</th></tr></thead>
+                        <tbody id="historyBody">
+                            <tr><td style="padding:15px">Moy almashtirish</td><td>15.04.2024</td><td>450,000 UZS</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<div id="toast">Habar</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    // ── DATA ENGINE ──
+    const regions = {
+        toshkent: { lat: 41.3111, lon: 69.2797 },
+        samarqand: { lat: 39.6542, lon: 66.9597 },
+        buxoro: { lat: 39.7747, lon: 64.4286 },
+        namangan: { lat: 40.9983, lon: 71.6726 },
+        andijon: { lat: 40.7821, lon: 72.3442 },
+        fargona: { lat: 40.3842, lon: 71.7842 },
+        navoiy: { lat: 40.0844, lon: 65.3792 }
+    };
+
+    const workshopsBase = [
+        { name: "Premium Auto Service", rating: 4.9, tel: "+998 71 200 11 01", off: {lat: 0.01, lon: 0.01} },
+        { name: "Mega Tuning Center", rating: 4.8, tel: "+998 90 333 44 55", off: {lat: -0.01, lon: 0.02} },
+        { name: "Express Oil Center", rating: 5.0, tel: "+998 66 233 10 10", off: {lat: 0.02, lon: -0.01} },
+        { name: "Asia Motors", rating: 4.7, tel: "+998 93 123 45 67", off: {lat: -0.02, lon: -0.01} },
+        { name: "Master Hands", rating: 4.9, tel: "+998 97 777 00 11", off: {lat: 0.01, lon: 0.02} }
+    ];
+
+    const gasStationsBase = [
+        { brand: "UNG PETRO", ai92: 10800, ai95: 12900, metan: 3800, off: {lat: 0.015, lon: -0.01} },
+        { brand: "MUSTANG OIL", ai92: 10900, ai95: 13000, metan: 3850, off: {lat: -0.02, lon: 0.02} },
+        { brand: "IBR FUEL", ai92: 10700, ai95: 13200, metan: 3750, off: {lat: 0.025, lon: 0.01} }
+    ];
+
+    const products = [
+        { name: "Bosch Akkumulyator", price: "850,000", icon: "🔋" },
+        { name: "Shell Helix 5W-40", price: "420,000", icon: "🛢️" },
+        { name: "Michelin Shina", price: "1,100,000", icon: "⭕" }
+    ];
+
+    // ── UTILS ──
+    function getDistance(lat1, lon1, lat2, lon2) {
+        const R = 6371;
+        const dLat = (lat2-lat1) * Math.PI / 180;
+        const dLon = (lon2-lon1) * Math.PI / 180;
+        const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon/2) * Math.sin(dLon/2);
+        return (R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)))).toFixed(1);
+    }
+
+    // ── OFFLINE CHECK ──
+    window.addEventListener('offline', () => { document.getElementById('offlineMode').style.display = 'flex'; });
+    window.addEventListener('online', () => { document.getElementById('offlineMode').style.display = 'none'; });
+
+    // ── APP LOGIC ──
+    let map;
+    let currentAuthMode = 'login';
+
+    function changeRegion() {
+        const r = document.getElementById('regionSelector').value;
+        const c = regions[r];
+        if(map) map.setView([c.lat, c.lon], 12);
+        renderWorkshops();
+        renderFuel('dist');
+        showToast(`📍 Hudud: ${r.toUpperCase()}`);
+    }
+
+    function renderWorkshops() {
+        const r = document.getElementById('regionSelector').value;
+        const center = regions[r];
+        const container = document.getElementById('workshopList');
+        container.innerHTML = '';
+        
+        workshopsBase.forEach(w => {
+            const lat = center.lat + w.off.lat;
+            const lon = center.lon + w.off.lon;
+            const dist = getDistance(center.lat, center.lon, lat, lon);
+            container.innerHTML += `
+                <div class="card">
+                    <div style="display:flex; justify-content:space-between">
+                        <h3>${w.name}</h3>
+                        <span style="color:var(--primary)">⭐ ${w.rating}</span>
+                    </div>
+                    <p style="font-size:12px; color:var(--text-muted); margin:10px 0">Masofa: ${dist} km</p>
+                    <div style="font-weight:700; color:var(--success)">${w.tel}</div>
+                    <button class="btn btn-primary w-full" style="width:100%; margin-top:15px" onclick="showToast('✅ Navbat band qilindi!')">Xizmatga yozilish</button>
+                </div>
+            `;
+            if(map) L.marker([lat, lon]).addTo(map).bindPopup(w.name);
+        });
+    }
+
+    function renderFuel(sort) {
+        const r = document.getElementById('regionSelector').value;
+        const center = regions[r];
+        let list = gasStationsBase.map(f => ({
+            ...f, 
+            dist: parseFloat(getDistance(center.lat, center.lon, center.lat+f.off.lat, center.lon+f.off.lon))
+        }));
+
+        if(sort === 'price') list.sort((a,b) => a.ai92 - b.ai92);
+        else list.sort((a,b) => a.dist - b.dist);
+
+        const container = document.getElementById('fuelList');
+        container.innerHTML = '';
+        list.forEach(f => {
+            container.innerHTML += `
+                <div class="card" style="border-left: 5px solid var(--primary)">
+                    <div style="display:flex; justify-content:space-between">
+                        <h3>${f.brand}</h3>
+                        <span style="font-size:12px; color:var(--text-muted)">📍 ${f.dist} km</span>
+                    </div>
+                    <div style="margin:15px 0; display:flex; gap:10px">
+                        <div class="badge">92: ${f.ai92}</div>
+                        <div class="badge">95: ${f.ai95}</div>
+                        <div class="badge" style="color:var(--success)">Metan: ${f.metan}</div>
+                    </div>
+                    <button class="btn btn-ghost w-full" style="width:100%" onclick="showToast('🗺️ Yo'nalish ochildi')">Borish</button>
+                </div>
+            `;
+        });
+    }
+
+    function renderMarket() {
+        const container = document.getElementById('mList');
+        products.forEach(p => {
+            container.innerHTML += `
+                <div class="card" style="text-align:center">
+                    <div style="font-size:3rem; margin-bottom:15px">${p.icon}</div>
+                    <h4>${p.name}</h4>
+                    <h3 style="color:var(--primary); margin:10px 0">${p.price} UZS</h3>
+                    <button class="btn btn-ghost w-full" onclick="showToast('🛒 Savatga qo\\'shildi!')">Savatga</button>
+                </div>
+            `;
+        });
+    }
+
+    function initMap() {
+        if(map) return;
+        const c = regions.toshkent;
+        map = L.map('map').setView([c.lat, c.lon], 12);
+        // Using CartoDB tiles to avoid OSM access blocks
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
+        renderWorkshops();
+    }
+
+    function nav(id, el) {
+        document.querySelectorAll('.tab-view').forEach(t => t.style.display = 'none');
+        document.getElementById('sec-' + id).style.display = 'block';
+        document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+        if(el) el.classList.add('active');
+        if(el) document.getElementById('viewTitle').innerText = el.innerText;
+        if(id === 'workshops') setTimeout(initMap, 300);
+    }
+
+    function runAI() {
+        showToast("AI Skanerlamoqda...");
+        setTimeout(() => document.getElementById('aiRes').style.display = 'block', 1500);
+    }
+
+    function showAuth(mode) { 
+        currentAuthMode = mode;
+        document.getElementById('authModal').style.display = 'flex'; 
+        document.getElementById('authTitle').innerText = mode === 'reg' ? 'Ro\'yxatdan o\'tish' : 'Tizimga kirish';
+        document.getElementById('regFields').style.display = mode === 'reg' ? 'block' : 'none';
+    }
+
+    function doAuth() {
+        const u = document.getElementById('regUser').value || 'admin';
+        let n = "Foydalanuvchi";
+        if(currentAuthMode === 'reg') {
+            n = document.getElementById('regName').value || "Foydalanuvchi";
+        } else {
+            if(u === 'admin') n = "Admin";
+        }
+        const user = {n, u};
+        localStorage.setItem('v7_user', JSON.stringify(user));
+        location.reload();
+    }
+
+    function logout() { localStorage.removeItem('v7_user'); location.reload(); }
+    function toggleTheme() { document.body.classList.toggle('light-mode'); }
+    function showToast(m) { const t=document.getElementById('toast'); t.innerText=m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),3000); }
+
+    // INITIALIZE
+    const saved = JSON.parse(localStorage.getItem('v7_user'));
+    if(saved) {
+        document.getElementById('landingPage').style.display = 'none';
+        document.getElementById('appContainer').style.display = 'block';
+        document.getElementById('uName').innerText = saved.n;
+        document.getElementById('welcomeName').innerText = saved.n;
+        document.getElementById('pName').innerText = saved.n;
+        document.getElementById('pLogin').innerText = "@" + saved.u;
+        document.getElementById('uAv').innerText = saved.n[0].toUpperCase();
+        document.getElementById('pAv').innerText = saved.n[0].toUpperCase();
+        renderMarket();
+        renderFuel('dist');
+    }
+</script>
+</body>
+</html>
